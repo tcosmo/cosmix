@@ -300,7 +300,7 @@ def create_targets(
             if (
                 sample_desc is None
                 or sample_desc == empty_desc
-                or sample_desc in placed
+                or (sample_desc in placed and merge_repeats)
             ):
                 if j in not_only_repeats_col or not merge_repeats:
                     current_col += max_col_size + column_spacing
