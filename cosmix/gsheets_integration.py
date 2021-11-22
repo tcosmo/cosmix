@@ -105,7 +105,7 @@ def _create_gsheets_table_aux(
     mix: FixedVolumeMix, add_total_line=True, columns_default_unit=True
 ):
     species_table = mix.species_table(
-        columns_default_unit=columns_default_unit, gsheet_value_and_formats=True
+        columns_default_unit=columns_default_unit, gsheets_value_and_formats=True
     )
     table_width = len(species_table[0])
     full_table = [[mix.mix_name] + [""] * (table_width - 1)] + species_table
