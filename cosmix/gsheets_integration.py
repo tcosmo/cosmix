@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import os.path
 import time
-from typing import Callable
+from typing import Callable, List
 
 import gspread
 import numpy as np
@@ -124,6 +124,7 @@ def create_gsheets_table(
     add_total_line: bool = True,
     columns_default_unit=True,
     show_units_when_default_units=False,
+    extra_columns=[],
 ):
     """
     Transforms a mix into a gsheets table (and returns additional gsheets formatting info)
@@ -156,6 +157,15 @@ def create_gsheets_table(
             else:
                 table[-1].append(val)
                 format_table[-1].append(None)
+
+    for col in extra_columns:
+        for i, row in enumerate(table):
+            # Check needed because of extra total line
+            if i < len(col):
+                row.append(col[i])
+            else:
+                row.append("")
+            format_table[i].append(None)
 
     return table, format_table
 
@@ -295,6 +305,7 @@ def create_targets(
     workbook,
     layout_sheet,
     mix_parser: Callable[[str], FixedVolumeMix],
+    extra_columns_function: Callable[[FixedVolumeMix], List] = lambda x: [],
     max_col_size=4,
     merge_repeats=True,
     add_total_line=True,
@@ -319,6 +330,8 @@ def create_targets(
     layout_sheet: layout gsheets object as given by gspread.
 
     mix_parser: a function that, given a description of a mix outpus a `FixedVolumeMix`.
+
+    extra_columns_function: a function that takes a mix and returns extra gsheets column to add.
 
     max_col_size: the maximum number of columns of any target's table.
 
@@ -422,6 +435,7 @@ def create_targets(
                 add_total_line=add_total_line,
                 columns_default_unit=columns_default_unit,
                 show_units_when_default_units=show_units_when_default_units,
+                extra_columns=extra_columns_function(mix),
             )
             print(f"Placing target `{sample_desc}`")
             if print_mixes:

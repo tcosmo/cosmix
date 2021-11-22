@@ -2,7 +2,7 @@ import numbers
 from typing import Union
 
 import numpy as np
-from pint import Quantity, Unit
+from pint import Quantity, Unit, List
 from tabulate import tabulate
 
 from cosmix import ureg
@@ -44,7 +44,7 @@ class FixedVolumeMix(object):
         self.default_volume_unit: Unit = default_volume_unit
         self.default_conc_unit: Unit = default_conc_unit
 
-        self.species_list = []
+        self.species_list: List[MixSpecies] = []
         self._check_computed_volume()
 
     def resize(
