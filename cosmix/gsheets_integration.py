@@ -79,6 +79,14 @@ def xl_rowcol_to_cell(row_num, col_num):
     return col_str + str(row_num)
 
 
+def get_sheet_all_range(sheet):
+    max_row, max_col = (
+        sheet._properties["gridProperties"]["rowCount"],
+        sheet._properties["gridProperties"]["columnCount"],
+    )
+    return f"{xl_rowcol_to_cell(0,0)}:{xl_rowcol_to_cell(max_row, max_col)}"
+
+
 def _create_gsheet_table_aux(
     mix: FixedVolumeMix, add_total_line=True, columns_default_unit=True
 ):
@@ -364,7 +372,7 @@ def create_targets(
     workbook.batch_update(body)
 
     targets_sheet.format(
-        "*",
+        get_sheet_all_range(targets_sheet),
         {
             "textFormat": {
                 "fontSize": font_size,
