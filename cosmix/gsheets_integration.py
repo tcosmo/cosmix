@@ -448,7 +448,10 @@ def create_targets(
                 targets_sheet,
                 table,
                 format_table,
-                top_left_origin=(current_row, current_col),
+                top_left_origin=(
+                    current_row + 1,
+                    current_col,
+                ),  # current_row+1 to leave room for title
                 banding_ID=k,
             )
             requests += r
