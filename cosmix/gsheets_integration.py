@@ -220,14 +220,13 @@ def place_table_on_gsheets(
             format_instr[0], sheet._properties["sheetId"]
         )
         request = {
-            {
-                "repeatCell": {
-                    "range": grid_range,
-                    "cell": {"userEnteredFormat": format_instr[1]},
-                    "fields": "userEnteredFormat(%s)" % ",".join(["numberFormat"]),
-                }
+            "repeatCell": {
+                "range": grid_range,
+                "cell": {"userEnteredFormat": format_instr[1]},
+                "fields": "userEnteredFormat(%s)" % ",".join(["numberFormat"]),
             }
         }
+
         requests.append(request)
 
     if banding:
