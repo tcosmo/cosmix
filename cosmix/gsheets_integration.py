@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os
 import os.path
-import time
 from typing import Callable, List
 
 import gspread
@@ -11,6 +10,7 @@ from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from gspread.utils import a1_range_to_grid_range
 
 from cosmix.fixed_volume_mix import FixedVolumeMix
 from cosmix.format import GSHEETS_BANDING_COLORS
@@ -213,15 +213,23 @@ def place_table_on_gsheets(
             if val is not None:
                 format_instructions.append((f"{xl_rowcol_to_cell(row0+i,col0+j)}", val))
 
-    for format_instr in format_instructions:
-        sheet.format(
-            format_instr[0],
-            {"numberFormat": {"type": "NUMBER", "pattern": format_instr[1]}},
-        )
-        time.sleep(0.200)
-
     # Batch formatting requests
     requests = []
+    for format_instr in format_instructions:
+        grid_range = a1_range_to_grid_range(
+            format_instr[0], sheet._properties["sheetId"]
+        )
+        request = {
+            {
+                "repeatCell": {
+                    "range": grid_range,
+                    "cell": {"userEnteredFormat": format_instr[1]},
+                    "fields": "userEnteredFormat(%s)" % ",".join(["numberFormat"]),
+                }
+            }
+        }
+        requests.append(request)
+
     if banding:
         request = {
             "addBanding": {

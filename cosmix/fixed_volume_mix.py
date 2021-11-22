@@ -1,5 +1,5 @@
 import numbers
-from typing import Union, List
+from typing import List, Union
 
 import numpy as np
 from pint import Quantity, Unit
