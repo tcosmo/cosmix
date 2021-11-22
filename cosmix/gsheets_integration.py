@@ -324,6 +324,7 @@ def create_targets(
     show_units_when_default_units=False,
     layout_range="A1:M9",
     target_sheet_name="Targets",
+    overwrite_target_sheet=False,
     empty_row_filler=2,
     column_spacing=1,
     row_spacing=1,
@@ -358,6 +359,8 @@ def create_targets(
 
     target_sheet_name: name for the Targets sheet.
 
+    overwrite_target_sheet (bool): prevents Targets' sheet overwriting is set to False.
+
     empty_row_filler: how many rows should be used in the Targets sheet for each empty row in the layout.
 
     column_spacing: empty columns to put in the Targets' sheet for each column in the layout.
@@ -378,6 +381,10 @@ def create_targets(
 
     try:
         targets_sheet = workbook.worksheet(target_sheet_name)
+        if not overwrite_target_sheet:
+            raise ValueError(
+                f"The Targets' sheet `{target_sheet_name}` already exists and `overwrite_target_sheet` is set to False"
+            )
     except gspread.WorksheetNotFound as e:
         targets_sheet = workbook.add_worksheet("Targets", rows=100, cols=100)
     targets_sheet = reset_sheet(workbook, targets_sheet)
