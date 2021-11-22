@@ -223,9 +223,10 @@ def place_table_on_gsheets(
             "repeatCell": {
                 "range": grid_range,
                 "cell": {"userEnteredFormat": format_instr[1]},
-                "fields": "userEnteredFormat(%s)" % ",".join(["numberFormat"]),
+                "fields": "userEnteredFormat.numberFormat",
             }
         }
+        print(request)
 
         requests.append(request)
 
