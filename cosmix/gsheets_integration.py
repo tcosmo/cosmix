@@ -17,6 +17,7 @@ from cosmix.format import GSHEETS_BANDING_COLORS
 
 
 def auth_google(google_creds_path):
+    """Manages google auth pipeline and saves the auth token at `google_creds_path`."""
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
     creds = None
     if os.path.exists(os.path.join(google_creds_path, "google_token.json")):
@@ -44,8 +45,19 @@ def auth_google(google_creds_path):
     return creds
 
 
-def get_workbook_and_layout_sheets(sheet_url, creds_paths, layout_sheet_name="Layout"):
-    creds = auth_google(creds_paths)
+def get_workbook_and_layout_sheets(
+    sheet_url: str, creds_directory_paths, layout_sheet_name="Layout"
+):
+    """Returns the gspread workbook and Layout sheet situated at `sheet_url`.
+
+    Args:
+    sheet_url: URL of the Layout sheet.
+
+    creds_directory_paths: directory where google auth token should be read/saved.
+
+    layout_sheet_name: name of the sheet containing the Layout.
+    """
+    creds = auth_google(creds_directory_paths)
     gc = gspread.authorize(creds)
     workbook = gc.open_by_url(sheet_url)
     sheet = workbook.worksheet(layout_sheet_name)
@@ -118,8 +130,11 @@ def create_gsheets_table(
 
     Args:
     mix (FixedVolumeMix): The mix to transform to gsheets table.
+
     add_total_line (bool): Adds a final line with total volume to the table.
+
     columns_default_unit (bool): Uses the mix's default units in each column rather than custom units per cell.
+
     show_units_when_default_units (bool): if `columns_default_unit` is True, this flag decides whether to show the default unit in all cells or just in the column header.
 
     Returns:
@@ -158,11 +173,16 @@ def place_table_on_gsheets(
 
     Args:
     sheet: gsheets object as given by gspread.
-    table: gsheets-ready table (as outputted by `create_gsheets_table`)
-    format_table: formatting table (as outputted by `create_gsheets_table`)
-    top_left_origin: (row, col) 0-indexed of where to place the table on the sheet
-    banding: whether to use Banding (alternating colors) for the table
-    banding_ID: bandings are uniquely identified by an ID in gsheets
+
+    table: gsheets-ready table (as outputted by `create_gsheets_table`).
+
+    format_table: formatting table (as outputted by `create_gsheets_table`).
+
+    top_left_origin: (row, col) 0-indexed of where to place the table on the sheet.
+
+    banding: whether to use Banding (alternating colors) for the table.
+
+    banding_ID: bandings are uniquely identified by an ID in gsheets.
 
     Returns:
         Returns a table in gsheets format (row x cols 2D array) and a table of same dimension containing google sheets formatting instructions.
@@ -215,8 +235,11 @@ def reset_sheet(workbook, sheet, rows=1000, cols=1000):
 
     Args:
     workbook: workbook object as given by gspread.
+
     sheet: gsheets object as given by gspread.
+
     rows: number of rows of in the sheet.
+
     cols: number of cols in the sheet.
 
     Raises:
@@ -292,20 +315,35 @@ def create_targets(
 
     Args:
     workbook: workbook object as given by gspread.
+
     layout_sheet: layout gsheets object as given by gspread.
+
     mix_parser: a function that, given a description of a mix outpus a `FixedVolumeMix`.
+
     max_col_size: the maximum number of columns of any target's table.
+
     merge_repeats: should mixes corresponding to the same sample be mixed in the Targets' sheet.
+
     add_total_line (bool): Adds a final line with total volume to the table.
+
     columns_default_unit (bool): Uses the mix's default units in each column rather than custom units per cell.
+
     show_units_when_default_units (bool): if `columns_default_unit` is True, this flag decides whether to show the default unit in all cells or just in the column header.
+
     layout_range: where is the layout placed on the Layout sheet (NotImplemented).
+
     target_sheet_name: name for the Targets sheet.
+
     empty_row_filler: how many rows should be used in the Targets sheet for each empty row in the layout.
+
     column_spacing: empty columns to put in the Targets' sheet for each column in the layout.
+
     row_spacing: empty rows to put in the Targets' sheet for each row in the layout.
+
     empty_desc: the name of samples that are empty and should be ignored (useful to capture noise sometimes).
+
     print_mixes: whether this function should print the mixes each time it is putting them in the sheet.
+
     font_size: font size to use in the Targets' sheet.
     """
 
