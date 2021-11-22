@@ -164,10 +164,12 @@ def create_gsheets_table(
         for i, row in enumerate(table):
             # Check needed because of extra total line
             if i < len(col):
-                row.append(col[i])
+                val, gsheets_format = col[i]
+                row.append(val)
+                format_table[i].append(gsheets_format)
             else:
                 row.append("")
-            format_table[i].append(None)
+                format_table[i].append(None)
 
     return table, format_table
 
