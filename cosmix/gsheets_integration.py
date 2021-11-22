@@ -250,6 +250,14 @@ def create_targets(
     except gspread.WorksheetNotFound as e:
         targets_sheet = workbook.add_worksheet("Targets", rows=100, cols=100)
     targets_sheet = reset_sheet(workbook, targets_sheet)
+    targets_sheet.format(
+        get_sheet_all_range(targets_sheet),
+        {
+            "textFormat": {
+                "fontSize": font_size,
+            },
+        },
+    )
 
     layout = extract_layout_from_layout_sheet(layout_sheet, layout_range=layout_range)
 
@@ -370,14 +378,5 @@ def create_targets(
 
     body = {"requests": requests}
     workbook.batch_update(body)
-
-    targets_sheet.format(
-        get_sheet_all_range(targets_sheet),
-        {
-            "textFormat": {
-                "fontSize": font_size,
-            },
-        },
-    )
 
     return targets_sheet
