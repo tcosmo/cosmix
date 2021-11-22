@@ -1,6 +1,6 @@
 from pint import UnitRegistry
 
-from cosmix._version import *
+from cosmix._version import __version__
 
 # TODO let user change this
 ureg = UnitRegistry()
