@@ -449,9 +449,9 @@ def create_targets(
                 table,
                 format_table,
                 top_left_origin=(
-                    current_row + 1,
+                    current_row,
                     current_col,
-                ),  # current_row+1 to leave room for title
+                ),
                 banding_ID=k,
             )
             requests += r
