@@ -108,7 +108,9 @@ def _create_gsheets_table_aux(
         columns_default_unit=columns_default_unit, gsheets_value_and_formats=True
     )
     table_width = len(species_table[0])
-    full_table = [[mix.mix_name] + [""] * (table_width - 1)] + species_table
+    # full_table = [[mix.mix_name] + [""] * (table_width - 1)] + species_table
+    # ^ In fact name will be copied later from layout sheet
+    full_table = species_table
     if add_total_line:
         full_table += [
             ["Total"]
@@ -473,7 +475,6 @@ def create_targets(
                             "startColumnIndex": current_col,
                             "endColumnIndex": current_col + 1,
                         },
-                        "pasteType": "PASTE_FORMAT",
                     }
                 }
             )
