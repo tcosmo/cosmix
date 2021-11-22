@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import os.path
 import time
+from typing import Callable
 
 import gspread
 import numpy as np
@@ -80,6 +81,7 @@ def xl_rowcol_to_cell(row_num, col_num):
 
 
 def get_sheet_all_range(sheet):
+    """Returns gsheets range corresponding to all the cells in the sheet."""
     max_row, max_col = (
         sheet._properties["gridProperties"]["rowCount"],
         sheet._properties["gridProperties"]["columnCount"],
@@ -87,7 +89,7 @@ def get_sheet_all_range(sheet):
     return f"{xl_rowcol_to_cell(0,0)}:{xl_rowcol_to_cell(max_row, max_col)}"
 
 
-def _create_gsheet_table_aux(
+def _create_gsheets_table_aux(
     mix: FixedVolumeMix, add_total_line=True, columns_default_unit=True
 ):
     species_table = mix.species_table(
@@ -105,13 +107,25 @@ def _create_gsheet_table_aux(
     return full_table
 
 
-def create_gsheet_table(
+def create_gsheets_table(
     mix: FixedVolumeMix,
-    add_total_line=True,
+    add_total_line: bool = True,
     columns_default_unit=True,
     show_units_when_default_units=False,
 ):
-    table_aux = _create_gsheet_table_aux(mix, add_total_line, columns_default_unit)
+    """
+    Transforms a mix into a gsheets table (and returns additional gsheets formatting info)
+
+    Args:
+    mix (FixedVolumeMix): The mix to transform to gsheets table.
+    add_total_line (bool): Adds a final line with total volume to the table.
+    columns_default_unit (bool): Uses the mix's default units in each column rather than custom units per cell.
+    show_units_when_default_units (bool): if `columns_default_unit` is True, this flag decides whether to show the default unit in all cells or just in the column header.
+
+    Returns:
+        Returns a table in gsheets format (row x cols 2D array) and a table of same dimension containing google sheets formatting instructions.
+    """
+    table_aux = _create_gsheets_table_aux(mix, add_total_line, columns_default_unit)
 
     table, format_table = [], []
     for row in table_aux:
@@ -131,7 +145,7 @@ def create_gsheet_table(
     return table, format_table
 
 
-def place_table_on_gsheet(
+def place_table_on_gsheets(
     sheet,
     table,
     format_table=[],
@@ -139,6 +153,21 @@ def place_table_on_gsheet(
     banding=True,
     banding_ID=0,
 ):
+    """
+    Places a gsheets-ready table (as outputted by `create_gsheets_table`) at `top_left_origin` on the `sheet`.
+
+    Args:
+    sheet: gsheets object as given by gspread.
+    table: gsheets-ready table (as outputted by `create_gsheets_table`)
+    format_table: formatting table (as outputted by `create_gsheets_table`)
+    top_left_origin: (row, col) 0-indexed of where to place the table on the sheet
+    banding: whether to use Banding (alternating colors) for the table
+    banding_ID: bandings are uniquely identified by an ID in gsheets
+
+    Returns:
+        Returns a table in gsheets format (row x cols 2D array) and a table of same dimension containing google sheets formatting instructions.
+    """
+
     table_height = len(table)
     table_width = len(table[0])
     row0, col0 = top_left_origin
@@ -180,15 +209,29 @@ def place_table_on_gsheet(
     return requests, {"range": sheet_range, "values": table}
 
 
-def reset_sheet(workbook, sheet):
+def reset_sheet(workbook, sheet, rows=1000, cols=1000):
+    """
+    Deletes and re-creates the `sheet`. This is very hard reset is needed because of Banding...
+
+    Args:
+    workbook: workbook object as given by gspread.
+    sheet: gsheets object as given by gspread.
+    rows: number of rows of in the sheet.
+    cols: number of cols in the sheet.
+
+    Raises:
+    It probably raises something if the workbook does not contain the sheet...
+    """
     # requests = {"requests": [{"updateCells": {"range": {"sheetId": sheet._properties['sheetId']}, "fields": "*"}}]}
     # res = workbook.batch_update(requests)
     # ^ does not remove bandings
+    title = sheet._properties["title"]
     workbook.del_worksheet(sheet)
-    return workbook.add_worksheet("Targets", rows=1000, cols=1000)
+    return workbook.add_worksheet(title, rows=rows, cols=cols)
 
 
 def _best_top_left(table):
+    """Returns indices so to discard empty rows and cols in top left direction."""
     table_np = np.array(table)
 
     i0 = 0
@@ -209,6 +252,7 @@ def _best_top_left(table):
 
 
 def extract_layout_from_layout_sheet(layout_sheet, layout_range="A1:M9"):
+    """Get the layout as specified in the `layout_sheet` and placed on `layout_range`."""
     layout_values = layout_sheet.get_values(layout_range)
 
     layout = {}
@@ -227,18 +271,43 @@ def extract_layout_from_layout_sheet(layout_sheet, layout_range="A1:M9"):
 def create_targets(
     workbook,
     layout_sheet,
-    mix_parser,
+    mix_parser: Callable[[str], FixedVolumeMix],
     max_col_size=4,
     merge_repeats=True,
+    add_total_line=True,
+    columns_default_unit=True,
+    show_units_when_default_units=False,
     layout_range="A1:M9",
     target_sheet_name="Targets",
-    empty_line_filler=2,
+    empty_row_filler=2,
     column_spacing=1,
     row_spacing=1,
     empty_desc="empty",
     print_mixes=False,
     font_size=10,
 ):
+    """
+    Creates the targets gsheets by reading the layout on the layout sheet, producing each mix using the `mix_parser`
+    and then placing each mix's gsheets table on the Targets sheet.
+
+    Args:
+    workbook: workbook object as given by gspread.
+    layout_sheet: layout gsheets object as given by gspread.
+    mix_parser: a function that, given a description of a mix outpus a `FixedVolumeMix`.
+    max_col_size: the maximum number of columns of any target's table.
+    merge_repeats: should mixes corresponding to the same sample be mixed in the Targets' sheet.
+    add_total_line (bool): Adds a final line with total volume to the table.
+    columns_default_unit (bool): Uses the mix's default units in each column rather than custom units per cell.
+    show_units_when_default_units (bool): if `columns_default_unit` is True, this flag decides whether to show the default unit in all cells or just in the column header.
+    layout_range: where is the layout placed on the Layout sheet (NotImplemented).
+    target_sheet_name: name for the Targets sheet.
+    empty_row_filler: how many rows should be used in the Targets sheet for each empty row in the layout.
+    column_spacing: empty columns to put in the Targets' sheet for each column in the layout.
+    row_spacing: empty rows to put in the Targets' sheet for each row in the layout.
+    empty_desc: the name of samples that are empty and should be ignored (useful to capture noise sometimes).
+    print_mixes: whether this function should print the mixes each time it is putting them in the sheet.
+    font_size: font size to use in the Targets' sheet.
+    """
 
     if layout_range != "A1:M9":
         raise NotImplementedError(
@@ -310,13 +379,18 @@ def create_targets(
             mix = mix_parser(sample_desc)
             if merge_repeats and len(layout[sample_desc]) > 1:
                 mix.resize(mix.total_target_volume * len(layout[sample_desc]))
-            table, format_table = create_gsheet_table(mix)
+            table, format_table = create_gsheets_table(
+                mix,
+                add_total_line=add_total_line,
+                columns_default_unit=columns_default_unit,
+                show_units_when_default_units=show_units_when_default_units,
+            )
             print(f"Placing target `{sample_desc}`")
             if print_mixes:
                 print(mix)
                 print()
             # print(current_col,current_row)
-            r, u = place_table_on_gsheet(
+            r, u = place_table_on_gsheets(
                 targets_sheet,
                 table,
                 format_table,
@@ -357,7 +431,7 @@ def create_targets(
 
         if i in not_only_repeats_row or not merge_repeats or empty:
             current_row += (
-                max_table_height + row_spacing + (0 if not empty else empty_line_filler)
+                max_table_height + row_spacing + (0 if not empty else empty_row_filler)
             )
 
     # Auto fit
