@@ -28,7 +28,7 @@ def gsheets_quantity_format(q: Quantity, show_units=True):
         else:
             format_str = '#\ "{:~P}"'.format(q.units)
     if is_fractional:
-        format_str = "#.##"
+        format_str = '#.##\ "{:~P}"'.format(q.units)
     # gsheets API way of specifying formats
     return {"numberFormat": {"type": "NUMBER", "pattern": format_str}}
 
