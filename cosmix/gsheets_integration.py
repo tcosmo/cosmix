@@ -228,6 +228,7 @@ def create_targets(
     column_spacing=1,
     row_spacing=1,
     empty_desc="empty",
+    print_mixes=False,
 ):
 
     if layout_range != "A1:M9":
@@ -293,9 +294,10 @@ def create_targets(
             if merge_repeats and len(layout[sample_desc]) > 1:
                 mix.resize(mix.total_target_volume * len(layout[sample_desc]))
             table, format_table = create_gsheet_table(mix)
-            print(f"Placing target `{sample_desc}`:")
-            # print(mix)
-            # print()
+            print(f"Placing target `{sample_desc}`")
+            if print_mixes:
+                print(mix)
+                print()
             # print(current_col,current_row)
             r, u = place_table_on_gsheet(
                 targets_sheet,
