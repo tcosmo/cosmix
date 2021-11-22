@@ -1,8 +1,8 @@
 import numbers
-from typing import Union
+from typing import Union, List
 
 import numpy as np
-from pint import Quantity, Unit, List
+from pint import Quantity, Unit
 from tabulate import tabulate
 
 from cosmix import ureg
