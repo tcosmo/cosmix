@@ -298,7 +298,6 @@ def create_targets(
             # print()
             # print(current_col,current_row)
             r, u = place_table_on_gsheet(
-                workbook,
                 targets_sheet,
                 table,
                 format_table,
