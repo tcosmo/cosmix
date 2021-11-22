@@ -229,6 +229,7 @@ def create_targets(
     row_spacing=1,
     empty_desc="empty",
     print_mixes=False,
+    font_size=10,
 ):
 
     if layout_range != "A1:M9":
@@ -361,5 +362,14 @@ def create_targets(
 
     body = {"requests": requests}
     workbook.batch_update(body)
+
+    targets_sheet.format(
+        "*",
+        {
+            "textFormat": {
+                "fontSize": font_size,
+            },
+        },
+    )
 
     return targets_sheet
