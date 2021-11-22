@@ -21,15 +21,16 @@ def gsheets_quantity_format(q: Quantity, show_units=True):
     # #.##\ "uL"
     base_number = q.to_tuple()[0]
     is_fractional = len(str(base_number).split(".")) > 1
-
+    format_str = "#"
     if show_units:
         if is_fractional:
-            return '#.##\ "{:~P}"'.format(q.units)
+            format_str = '#.##\ "{:~P}"'.format(q.units)
         else:
-            return '#\ "{:~P}"'.format(q.units)
+            format_str = '#\ "{:~P}"'.format(q.units)
     if is_fractional:
-        return "#.##"
-    return "#"
+        format_str = "#.##"
+    # gsheets API way of specifying formats
+    return {"numberFormat": {"type": "NUMBER", "pattern": format_str}}
 
 
 GSHEETS_BANDING_COLORS = {

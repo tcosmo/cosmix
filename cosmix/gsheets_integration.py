@@ -226,7 +226,6 @@ def place_table_on_gsheets(
                 "fields": "userEnteredFormat.numberFormat",
             }
         }
-        print(request)
 
         requests.append(request)
 
