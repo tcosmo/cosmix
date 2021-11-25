@@ -331,6 +331,7 @@ def create_targets(
     empty_desc="empty",
     print_mixes=False,
     font_size=10,
+    place_titles_above_tables=False,
 ):
     """
     Creates the targets gsheets by reading the layout on the layout sheet, producing each mix using the `mix_parser`
@@ -372,6 +373,8 @@ def create_targets(
     print_mixes: whether this function should print the mixes each time it is putting them in the sheet.
 
     font_size: font size to use in the Targets' sheet.
+
+    place_titles_above_tables: whether to put the title of each target above the table or at the same level.
     """
 
     if layout_range != "A1:M9":
@@ -465,7 +468,7 @@ def create_targets(
                 table,
                 format_table,
                 top_left_origin=(
-                    current_row,
+                    current_row + (1 if place_titles_above_tables else 0),
                     current_col,
                 ),
                 banding_ID=k,
@@ -473,9 +476,12 @@ def create_targets(
             requests += r
             updates.append(u)
             k += 1
-            max_table_height = max(len(table), max_table_height)
+            max_table_height = max(
+                len(table) + (1 if place_titles_above_tables else 0), max_table_height
+            )
             placed[sample_desc] = True
 
+            # place title
             requests.append(
                 {
                     "copyPaste": {
