@@ -430,7 +430,7 @@ def create_targets(
                 f"The Targets' sheet `{target_sheet_name}` already exists and `overwrite_target_sheet` is set to False"
             )
     except gspread.WorksheetNotFound as e:
-        targets_sheet = workbook.add_worksheet("Targets", rows=100, cols=100)
+        targets_sheet = workbook.add_worksheet(target_sheet_name, rows=100, cols=100)
     targets_sheet = reset_sheet(workbook, targets_sheet)
     targets_sheet.format(
         get_sheet_all_range(targets_sheet),
