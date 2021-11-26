@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 import os.path
-from typing import Callable, List
+from typing import Callable, List, Tuple, Union
 
 import gspread
 import numpy as np
@@ -64,9 +64,11 @@ def get_workbook_and_layout_sheets(
     return workbook, sheet
 
 
-def xl_rowcol_to_cell(row_num, col_num):
+def xl_rowcol_to_cell(row_num, col_num, absolute=False):
     """(row,col) to Google sheets cell ID.
     Example: (0,0) -> "A1"
+
+    If `absolute`: (0,0) -> "$A$1"
     """
     # Removed these 2 lines if your row, col is 1 indexed.
     row_num += 1
@@ -89,7 +91,9 @@ def xl_rowcol_to_cell(row_num, col_num):
         # Get the next order of magnitude.
         col_num = int((col_num - 1) / 26)
 
-    return col_str + str(row_num)
+    if not absolute:
+        return col_str + str(row_num)
+    return "$" + col_str + "$" + str(row_num)
 
 
 def get_sheet_all_range(sheet):
@@ -102,11 +106,40 @@ def get_sheet_all_range(sheet):
 
 
 def _create_gsheets_table_aux(
-    mix: FixedVolumeMix, add_total_line=True, columns_default_unit=True
+    mix: FixedVolumeMix,
+    add_total_line=True,
+    columns_default_unit=True,
+    coordinates_for_formula: Union[None, Tuple] = None,
 ):
     species_table = mix.species_table(
         columns_default_unit=columns_default_unit, gsheets_value_and_formats=True
     )
+
+    if coordinates_for_formula is not None:
+        i, j = coordinates_for_formula
+        total_volume_for_formula = mix.computed_volume().m
+        if add_total_line:
+            total_volume_for_formula = xl_rowcol_to_cell(
+                i + len(species_table), j + 3, absolute=True
+            )
+        for k in range(len(species_table[1:])):
+            species = mix.species_list[k]
+
+            if species.inverse_fraction is not None:
+                species_table[k + 1][
+                    -1
+                ] = f"={total_volume_for_formula}/{species.inverse_fraction}"
+            elif species.is_completion:
+                sum_start = xl_rowcol_to_cell(i + 1, j + 3)
+                sum_end = xl_rowcol_to_cell(i + len(species_table) - 2, j + 3)
+                species_table[k + 1][
+                    -1
+                ] = f"={total_volume_for_formula}-SUM({sum_start}:{sum_end})"
+            else:
+                species_table[k + 1][
+                    -1
+                ] = f"={xl_rowcol_to_cell(i+k+1,j+2)}*{total_volume_for_formula}/{xl_rowcol_to_cell(i+k+1,j+1)}"
+
     table_width = len(species_table[0])
     # full_table = [[mix.mix_name] + [""] * (table_width - 1)] + species_table
     # ^ In fact name will be copied later from layout sheet
@@ -127,6 +160,7 @@ def create_gsheets_table(
     columns_default_unit=True,
     show_units_when_default_units=False,
     extra_columns=[],
+    coordinates_for_formula: Union[None, Tuple] = None,
 ):
     """
     Transforms a mix into a gsheets table (and returns additional gsheets formatting info)
@@ -140,10 +174,14 @@ def create_gsheets_table(
 
     show_units_when_default_units (bool): if `columns_default_unit` is True, this flag decides whether to show the default unit in all cells or just in the column header.
 
+    coordinates_for_formula: if given, volume cells will be replaced with formula instead of value.
+
     Returns:
         Returns a table in gsheets format (row x cols 2D array) and a table of same dimension containing google sheets formatting instructions.
     """
-    table_aux = _create_gsheets_table_aux(mix, add_total_line, columns_default_unit)
+    table_aux = _create_gsheets_table_aux(
+        mix, add_total_line, columns_default_unit, coordinates_for_formula
+    )
 
     table, format_table = [], []
     for row in table_aux:
@@ -316,6 +354,7 @@ def create_targets(
     workbook,
     layout_sheet,
     mix_parser: Callable[[str], FixedVolumeMix],
+    insert_formulas_instead_of_values: bool = False,
     extra_columns_function: Callable[[FixedVolumeMix], List] = lambda x: [],
     max_col_size=4,
     merge_repeats=True,
@@ -343,6 +382,8 @@ def create_targets(
     layout_sheet: layout gsheets object as given by gspread.
 
     mix_parser: a function that, given a description of a mix outpus a `FixedVolumeMix`.
+
+    insert_formulas_instead_of_values: puts formulas for volume columns instead of values.
 
     extra_columns_function: a function that takes a mix and returns extra gsheets column to add.
 
@@ -451,12 +492,21 @@ def create_targets(
             mix = mix_parser(sample_desc)
             if merge_repeats and len(layout[sample_desc]) > 1:
                 mix.resize(mix.total_target_volume * len(layout[sample_desc]))
+
+            table_position = (
+                current_row + (1 if place_titles_above_tables else 0),
+                current_col,
+            )
+
             table, format_table = create_gsheets_table(
                 mix,
                 add_total_line=add_total_line,
                 columns_default_unit=columns_default_unit,
                 show_units_when_default_units=show_units_when_default_units,
                 extra_columns=extra_columns_function(mix),
+                coordinates_for_formula=(
+                    table_position if insert_formulas_instead_of_values else None
+                ),
             )
             print(f"Placing target `{sample_desc}`")
             if print_mixes:
@@ -467,10 +517,7 @@ def create_targets(
                 targets_sheet,
                 table,
                 format_table,
-                top_left_origin=(
-                    current_row + (1 if place_titles_above_tables else 0),
-                    current_col,
-                ),
+                top_left_origin=table_position,
                 banding_ID=k,
             )
             requests += r
@@ -526,7 +573,11 @@ def create_targets(
         }
     ]
 
-    targets_sheet.batch_update(updates)
+    if insert_formulas_instead_of_values:
+        # Flag is needed to have Gsheet interpret formulaes correctly
+        targets_sheet.batch_update(updates, value_input_option="USER_ENTERED")
+    else:
+        targets_sheet.batch_update(updates)
 
     body = {"requests": requests}
     workbook.batch_update(body)

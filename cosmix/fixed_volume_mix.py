@@ -16,11 +16,16 @@ class MixSpecies(object):
         stock_conc: Union[Quantity, None],
         target_conc: Union[Quantity, None],
         target_volume: Union[Quantity, None],
+        inverse_fraction: Union[numbers.Number, None] = None,
+        is_completion: bool = False,
     ):
         self.species_name: str = species_name
         self.stock_conc: Union[Quantity, None] = stock_conc
         self.target_conc: Union[Quantity, None] = target_conc
         self.target_volume: Union[Quantity, None] = target_volume
+
+        self.inverse_fraction: Union[numbers.Number, None] = inverse_fraction
+        self.is_completion: bool = is_completion
 
 
 class FixedVolumeMix(object):
@@ -96,6 +101,8 @@ class FixedVolumeMix(object):
         stock_conc: Union[None, numbers.Number, Quantity],
         target_conc: Union[None, numbers.Number, Quantity],
         target_volume: Union[None, numbers.Number, Quantity] = None,
+        _inverse_fraction: Union[None, numbers.Number] = None,
+        _is_completion: bool = False,
     ):
 
         if isinstance(stock_conc, numbers.Number):
@@ -110,7 +117,14 @@ class FixedVolumeMix(object):
                 target_volume = target_conc * self.total_target_volume / stock_conc
 
         self.species_list.append(
-            MixSpecies(species_name, stock_conc, target_conc, target_volume)
+            MixSpecies(
+                species_name,
+                stock_conc,
+                target_conc,
+                target_volume,
+                inverse_fraction=_inverse_fraction,
+                is_completion=_is_completion,
+            )
         )
         self._check_computed_volume()
 
@@ -150,7 +164,11 @@ class FixedVolumeMix(object):
         inverse_fraction: numbers.Number,
     ):
         self.add_species(
-            species_name, None, None, self.total_target_volume / inverse_fraction
+            species_name,
+            None,
+            None,
+            self.total_target_volume / inverse_fraction,
+            _inverse_fraction=inverse_fraction,
         )
 
     def add_species_volume_complete_with(self, species_name):
@@ -162,7 +180,11 @@ class FixedVolumeMix(object):
         # Assertion should be true if use has been using the exposed API
         assert self.total_target_volume - self.computed_volume() >= 0
         self.add_species(
-            species_name, None, None, self.total_target_volume - self.computed_volume()
+            species_name,
+            None,
+            None,
+            self.total_target_volume - self.computed_volume(),
+            _is_completion=True,
         )
 
     def species_table(
