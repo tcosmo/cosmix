@@ -5,7 +5,7 @@ google-auth==2.3.3
 google-auth-oauthlib==0.4.6
 gspread==4.0.1
 idna==3.3
-numpy==1.21.4
+numpy==1.26.0
 oauthlib==3.1.1
 packaging==21.3
 Pint==0.18
