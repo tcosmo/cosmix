@@ -5,6 +5,7 @@ import os.path
 from typing import Callable, List, Tuple, Union
 
 import gspread
+from gspread import Worksheet
 import numpy as np
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
@@ -238,7 +239,6 @@ def place_table_on_gsheets(
     format_table=[],
     top_left_origin=(0, 0),
     banding=True,
-    banding_ID=0,
 ):
     """
     Places a gsheets-ready table (as outputted by `create_gsheets_table`) at `top_left_origin` on the `sheet`.
@@ -253,8 +253,6 @@ def place_table_on_gsheets(
     top_left_origin: (row, col) 0-indexed of where to place the table on the sheet.
 
     banding: whether to use Banding (alternating colors) for the table.
-
-    banding_ID: bandings are uniquely identified by an ID in gsheets.
 
     Returns:
         Returns a table in gsheets format (row x cols 2D array) and a table of same dimension containing google sheets formatting instructions.
@@ -291,7 +289,6 @@ def place_table_on_gsheets(
         request = {
             "addBanding": {
                 "bandedRange": {
-                    "bandedRangeId": banding_ID + 1,
                     "range": {
                         "sheetId": sheet._properties["sheetId"],
                         "startRowIndex": row0,
@@ -444,13 +441,15 @@ def create_targets(
         )
 
     try:
-        targets_sheet = workbook.worksheet(target_sheet_name)
+        targets_sheet: Worksheet = workbook.worksheet(target_sheet_name)
         if not overwrite_target_sheet:
             raise ValueError(
                 f"The Targets' sheet `{target_sheet_name}` already exists and `overwrite_target_sheet` is set to False"
             )
     except gspread.WorksheetNotFound as e:
-        targets_sheet = workbook.add_worksheet(target_sheet_name, rows=100, cols=100)
+        targets_sheet: Worksheet = workbook.add_worksheet(
+            target_sheet_name, rows=100, cols=100
+        )
     targets_sheet = reset_sheet(workbook, targets_sheet)
     targets_sheet.format(
         get_sheet_all_range(targets_sheet),
@@ -538,7 +537,6 @@ def create_targets(
                 table,
                 format_table,
                 top_left_origin=table_position,
-                banding_ID=k,
             )
             requests += r
             updates.append(u)
