@@ -39,7 +39,6 @@ class FixedVolumeMix(object):
         default_volume_unit: Unit = ureg.microlitres,
         default_conc_unit: Unit = ureg.nanomolar,
     ):
-
         self.mix_name = mix_name
 
         if isinstance(total_target_volume, numbers.Number):
@@ -57,7 +56,6 @@ class FixedVolumeMix(object):
         new_total_target_volume: Union[numbers.Number, Quantity],
         use_target_volume=True,
     ):
-
         if use_target_volume:
             volume_resize_from = self.total_target_volume
         else:
@@ -104,7 +102,6 @@ class FixedVolumeMix(object):
         _inverse_fraction: Union[None, numbers.Number] = None,
         _is_completion: bool = False,
     ):
-
         if isinstance(stock_conc, numbers.Number):
             stock_conc *= self.default_conc_unit
         if isinstance(target_conc, numbers.Number):
@@ -115,6 +112,10 @@ class FixedVolumeMix(object):
         if target_volume is None:
             if (stock_conc is not None) and (target_conc is not None):
                 target_volume = target_conc * self.total_target_volume / stock_conc
+
+        if target_conc is None:
+            if (stock_conc is not None) and (target_volume is not None):
+                target_conc = stock_conc * target_volume / self.total_target_volume
 
         self.species_list.append(
             MixSpecies(
@@ -135,7 +136,6 @@ class FixedVolumeMix(object):
         relative_to_species_name: str,
         excess: numbers.Number,
     ):
-
         if isinstance(stock_conc, numbers.Number):
             stock_conc *= self.default_conc_unit
 

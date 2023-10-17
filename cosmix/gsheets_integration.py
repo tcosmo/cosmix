@@ -46,20 +46,40 @@ def auth_google(google_creds_path):
 
 
 def get_workbook_and_layout_sheets(
-    sheet_url: str, creds_directory_paths, layout_sheet_name="Layout"
+    sheet_url: str | None = None,
+    sheet_title: str | None = None,
+    creds_directory_paths: str | None = None,
+    gcp_service_account_path: str | None = None,
+    layout_sheet_name="Layout",
 ):
     """Returns the gspread workbook and Layout sheet situated at `sheet_url`.
 
     Args:
     sheet_url: URL of the Layout sheet.
 
-    creds_directory_paths: directory where google auth token should be read/saved.
+    creds_directory_paths: directory where google auth token should be read/saved. If None, falls back on gcp service accounts which is another auth method.
+    gcp_service_account_path: path to the gcp service account json file. If None, falls back on creds_directory_paths which is another auth method.
 
     layout_sheet_name: name of the sheet containing the Layout.
     """
-    creds = auth_google(creds_directory_paths)
-    gc = gspread.authorize(creds)
-    workbook = gc.open_by_url(sheet_url)
+    if creds_directory_paths is not None:
+        creds = auth_google(creds_directory_paths)
+        gc = gspread.authorize(creds)
+    elif gcp_service_account_path is not None:
+        gc = gspread.service_account(filename=gcp_service_account_path)
+    else:
+        raise RuntimeError("No authentication method specified")
+
+    if sheet_url is not None:
+        workbook = gc.open_by_url(sheet_url)
+    elif sheet_title is not None:
+        workbooks = gc.openall(sheet_title)
+        if len(workbooks) > 1:
+            raise RuntimeError(f"Multiple workbooks with same title {sheet_title}")
+        workbook = workbooks[0]
+    else:
+        raise RuntimeError("No sheet specified")
+
     sheet = workbook.worksheet(layout_sheet_name)
     return workbook, sheet
 
