@@ -51,6 +51,40 @@ class FixedVolumeMix(object):
         self.species_list: List[MixSpecies] = []
         self._check_computed_volume()
 
+    def same_volume_content_than(
+        self, other_mix: "FixedVolumeMix", debug_print=False
+    ) -> bool:
+        if len(self.species_list) != len(other_mix.species_list):
+            if debug_print:
+                print("len fail")
+            return False
+
+        for species in self.species_list:
+            found = False
+            for other_species in other_mix.species_list:
+                if species.species_name == other_species.species_name:
+                    found = True
+                    # Need for awkward rounding because
+                    # The lib will do 3.5uL = 3500.00000001nL
+                    if species.target_volume.to(ureg.nanolitres).round(
+                        5
+                    ) != other_species.target_volume.to(ureg.nanoliters).round(5):
+                        if debug_print:
+                            print(
+                                "volume fail",
+                                species.target_volume.to(ureg.nanoliters).round(5),
+                                other_species.target_volume.to(ureg.nanoliters).round(
+                                    5
+                                ),
+                            )
+                        return False
+            if not found:
+                if debug_print:
+                    print("not found fail")
+                return False
+
+        return True
+
     def resize(
         self,
         new_total_target_volume: Union[numbers.Number, Quantity],
@@ -82,7 +116,7 @@ class FixedVolumeMix(object):
             self.computed_volume(), self.total_target_volume, self.FLOAT_TOLERANCE_EQ
         ):
             raise ValueError(
-                f"The mix's actual volume {self.computed_volume()} is not equal to the set target volume {self.total_target_volume} (up to {self.FLOAT_TOLERANCE_EQ})"
+                f"Mix `{self.mix_name}` actual volume {self.computed_volume()} is not equal to the set target volume {self.total_target_volume} (up to {self.FLOAT_TOLERANCE_EQ})"
             )
 
     def _check_computed_volume(self):
@@ -90,8 +124,21 @@ class FixedVolumeMix(object):
             self.computed_volume(), self.total_target_volume, self.FLOAT_TOLERANCE_EQ
         ):
             raise ValueError(
-                f"The mix's actual volume {self.computed_volume()} is bigger than the set target volume {self.total_target_volume}"
+                f"Mix `{self.mix_name}` actual volume {self.computed_volume()} is bigger than the set target volume {self.total_target_volume}"
             )
+
+    def add_or_update_species_volume(
+        self,
+        species_name: str,
+        add_target_volume: Union[None, numbers.Number, Quantity],
+    ):
+        if isinstance(add_target_volume, numbers.Number):
+            add_target_volume *= self.default_volume_unit
+        for i, species in enumerate(self.species_list):
+            if species.species_name == species_name:
+                self.species_list[i].target_volume += add_target_volume
+                return
+        self.add_species(species_name, None, None, target_volume=add_target_volume)
 
     def add_species(
         self,
