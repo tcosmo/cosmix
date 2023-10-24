@@ -354,10 +354,19 @@ def extract_layout_from_layout_sheet(layout_sheet, layout_range="A1:M9"):
     """Get the layout as specified in the `layout_sheet` and placed on `layout_range`."""
     layout_values = layout_sheet.get_values(layout_range)
 
+    from gspread.utils import a1_range_to_grid_range
+
+    range_to_grid = a1_range_to_grid_range(layout_range)
+
+    range_width = (
+        range_to_grid["endColumnIndex"] - range_to_grid["startColumnIndex"] - 1
+    )
+    range_height = range_to_grid["endRowIndex"] - range_to_grid["startRowIndex"] - 1
+
     layout = {}
     for row in layout_values:
-        if row[0] in ["A", "B", "C", "D", "E", "F", "G", "H"]:
-            for i in range(12):
+        if row[0] in [chr(ord("A") + k) for k in range(range_height)]:
+            for i in range(range_width):
                 cell_name = row[i + 1]
                 if cell_name != "":
                     if cell_name not in layout:
